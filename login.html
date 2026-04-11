@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Fornecedor - Camisa 10</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: #1a73e8; margin-bottom: 25px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #1557b0; }
+        .back-link { display: block; margin-top: 15px; color: #666; text-decoration: none; font-size: 13px; }
+        #erro { color: #dc3545; font-size: 13px; margin-bottom: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <input type="email" id="email" placeholder="Ex: seuemail@dominio.com">
+    <input type="password" id="senha" placeholder="Digite sua senha">
+
+    <button onclick="fazerLogin()">Entrar no Painel</button>
+    <p style="font-size: 14px; color: #666; margin-bottom: 5px;">Novo por aqui?</p>
+    <a href="cadastrar_fornecedor.html" style="color: #1a73e8; text-decoration: none; font-weight: bold; font-size: 14px;">Se você é um novo fornecedor, clique aqui!</a>
+
+    <a href="index.html" class="back-link">← Voltar ao início</a>
+</div>
+
+
+<script>
+    async function fazerLogin() {
+        const email = document.getElementById('email').value;
+        const senha = document.getElementById('senha').value;
+        const erroMsg = document.getElementById('erro');
+
+        if (!email || !senha) {
+            alert("Preencha todos os campos!");
+            return;
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, senha: senha })
+            });
+
+            const dados = await response.json();
+
+            if (response.ok && dados.status === "sucesso") {
+                window.location.href = "admin.html"; 
+            } else {
+                erroMsg.style.display = "block";
+                erroMsg.innerText = dados.mensagem || "Credenciais inválidas!";
+            }
+
+        } catch (error) {
+            console.error("Erro na conexão:", error);
+            alert("O servidor Python está desligado ou inacessível!");
+        }
+    }
+</script>
+</body>
+</html>

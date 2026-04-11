@@ -24,13 +24,22 @@ class Camisa(db.Model):
     qtd_m = db.Column(db.Integer, default=0)
     qtd_g = db.Column(db.Integer, default=0)
     qtd_gg = db.Column(db.Integer, default=0)
-
     def to_dict(self):
         return {
-            "id": self.id, "nome": self.nome, "preco": self.preco, "imagem": self.imagem_url,
-            "qtd_p": self.qtd_p, "qtd_m": self.qtd_m, "qtd_g": self.qtd_g, "qtd_gg": self.qtd_gg,
-            "total_stock": (self.qtd_p + self.qtd_m + self.qtd_g + self.qtd_gg)
+            "id": self.id, 
+            "nome": self.nome, 
+            "preco": self.preco, 
+            "imagem": self.imagem_url,
+            "qtd_p": self.qtd_p, 
+            "qtd_m": self.qtd_m, 
+            "qtd_g": self.qtd_g, 
+            "qtd_gg": self.qtd_gg
         }
+    
+class Fornecedor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    senha = db.Column(db.String(100), nullable=False)
 
 @app.route('/uploads/<filename>')
 def servir_imagem(filename):
@@ -88,6 +97,31 @@ def acao_camisa(id):
             return jsonify({"msg": "Sucesso"}), 200
         except Exception as e:
             return jsonify({"err": str(e)}), 400
+
+@app.route('/registrar_fornecedor', methods=['POST'])
+def registrar():
+    dados = request.json
+    if not dados or 'email' not in dados or 'senha' not in dados:
+        return jsonify({"erro": "Dados incompletos"}), 400
+    
+    try:
+        novo_f = Fornecedor(email=dados['email'], senha=dados['senha'])
+        db.session.add(novo_f)
+        db.session.commit()
+        return jsonify({"msg": "Fornecedor criado!"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"erro": "Email já cadastrado ou erro no banco"}), 400
+
+@app.route('/login', methods=['POST'])
+def login():
+    dados = request.json
+    fornecedor = Fornecedor.query.filter_by(email=dados['email'], senha=dados['senha']).first()
+    
+    if fornecedor:
+        return jsonify({"status": "sucesso", "mensagem": "Login realizado"}), 200
+    else:
+        return jsonify({"status": "erro", "mensagem": "Email ou senha incorretos"}), 401
 
 if __name__ == '__main__':
     with app.app_context():

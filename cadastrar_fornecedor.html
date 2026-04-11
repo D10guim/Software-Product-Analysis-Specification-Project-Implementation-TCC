@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Fornecedor - Camisa 10</title>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+
+        .card-cadastro { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 12px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+
+        h2 { color: #1a73e8; text-align: center; margin-bottom: 10px; font-size: 24px; }
+
+        p.subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 30px; }
+
+        .input-group { margin-bottom: 20px; }
+
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; font-size: 14px; }
+
+        input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; box-sizing: border-box;transition: border-color 0.3s, box-shadow 0.3s; }
+
+        input:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1); }
+
+        .admin-section { background-color: #fff5f5; padding: 15px; border-radius: 10px; border: 1px dashed #feb2b2; margin-top: 25px; }
+
+        .admin-section label { color: #c53030; }
+
+        button { width: 100%; padding: 14px; background-color: #1a73e8; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: background 0.3s; }
+
+        button:hover { background-color: #1557b0; }
+
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #777; text-decoration: none; font-size: 14px; }
+
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="card-cadastro">
+    <h2>Novo Fornecedor</h2>
+    <p class="subtitle">Cadastre uma nova conta de acesso ao estoque</p>
+
+    <div class="input-group">
+        <label>E-mail do Fornecedor</label>
+        <input type="email" id="email" placeholder="exemplo@camisa10.com">
+    </div>
+
+    <div class="input-group">
+        <label>Defina uma Senha</label>
+        <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+    </div>
+
+    <div class="admin-section">
+        <div class="input-group" style="margin-bottom: 0;">
+            <label>🔑 Senha Master (Permissão ADM)</label>
+            <input type="password" id="senha_adm" placeholder="Senha mestre do sistema">
+        </div>
+    </div>
+
+    <button onclick="cadastrarFornecedor()">Cadastrar fornecedor</button>
+
+    <a href="login.html" class="back-link">← Voltar para o Login</a>
+</div>
+
+<script>
+    async function cadastrarFornecedor() {
+        const email = document.getElementById('email').value;
+        const senha = document.getElementById('senha').value;
+        const senhaAdmDigitada = document.getElementById('senha_adm').value;
+        
+        const SENHA_MASTER_ADM = "adm@1234";
+
+        if (senhaAdmDigitada !== SENHA_MASTER_ADM) {
+            alert("❌ Acesso negado: Senha Administrativa incorreta.");
+            return;
+        }
+
+        if (!email || !senha) {
+            alert("⚠️ Por favor, preencha todos os campos do fornecedor.");
+            return;
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/registrar_fornecedor', { method: 'POST', headers: { 'Content-Type': 'application/json'}, body: JSON.stringify({ email: email, senha: senha }) });
+
+            const result = await response.json();
+
+            if (response.ok) { alert("🚀 Sucesso! Fornecedor cadastrado na base SQL."); window.location.href = "login.html"; } 
+            
+            else { alert ("Erro:" + (result.erro || result.msg || "E-mail já cadastrado")); }
+
+        } catch (error) { console.error("Erro na conexão:", error); alert("🚨 O servidor Python está desligado ou com erro de conexão!"); }
+    }
+</script>
+
+</body>
+</html>
