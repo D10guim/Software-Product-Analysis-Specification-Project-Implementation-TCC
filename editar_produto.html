@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Camisa - Camisa 10</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 40px; }
+        .form-edit { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin: 10px 0; }
+        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .cancelar { background: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="form-edit">
+    <h2>Editar Produto</h2>
+    <label>Nome da Camisa:</label>
+    <input type="text" id="edit_nome">
+    
+    <label>Descrição:</label>
+    <textarea id="edit_descricao" style="width:100%; height:80px; margin-bottom:10px;"></textarea>
+
+    <label>Preço (R$):</label>
+    <input type="number" id="edit_preco" step="0.01">
+    
+    <label>Estoque (P | M | G | GG):</label>
+    <div style="display: flex; gap: 5px;">
+        <input type="number" id="edit_p" placeholder="P">
+        <input type="number" id="edit_m" placeholder="M">
+        <input type="number" id="edit_g" placeholder="G">
+        <input type="number" id="edit_gg" placeholder="GG">
+    </div>
+
+    <label>Imagem Atual:</label><br>
+    <img id="img_atual" src="" alt="Preview"><br>
+    
+    <label>Alterar Foto:</label>
+    <input type="file" id="edit_foto" accept="image/*">
+
+    <button onclick="salvarAlteracoes()">Salvar Alterações</button>
+    <button class="cancelar" onclick="window.location.href='admin.html'">Cancelar</button>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const camisaId = urlParams.get('id');
+
+    window.onload = async () => {
+        const res = await fetch(`http://127.0.0.1:5000/camisas`);
+        const camisas = await res.json();
+        const camisa = camisas.find(c => c.id == camisaId);
+
+        if (camisa) {
+            document.getElementById('edit_nome').value = camisa.nome;
+            document.getElementById('edit_preco').value = camisa.preco;
+            document.getElementById('edit_descricao').value = camisa.descricao || '';
+            document.getElementById('edit_p').value = camisa.qtd_p;
+            document.getElementById('edit_m').value = camisa.qtd_m;
+            document.getElementById('edit_g').value = camisa.qtd_g;
+            document.getElementById('edit_gg').value = camisa.qtd_gg;
+            document.getElementById('img_atual').src = camisa.imagem;
+        }
+    };
+
+    async function salvarAlteracoes() {
+        const formData = new FormData();
+        formData.append('nome', document.getElementById('edit_nome').value);
+        formData.append('preco', document.getElementById('edit_preco').value);
+        formData.append('descricao', document.getElementById('edit_descricao').value);
+        formData.append('qtd_p', document.getElementById('edit_p').value);
+        formData.append('qtd_m', document.getElementById('edit_m').value);
+        formData.append('qtd_g', document.getElementById('edit_g').value);
+        formData.append('qtd_gg', document.getElementById('edit_gg').value);
+        
+        const foto = document.getElementById('edit_foto').files[0];
+        if (foto) formData.append('foto', foto);
+
+        const res = await fetch(`http://127.0.0.1:5000/camisas/${camisaId}`, {
+            method: 'PUT',
+            body: formData
+        });
+
+        if (res.ok) {
+            alert("Produto atualizado com sucesso!");
+            window.location.href = "admin.html";
+        } else {
+            alert("Erro ao salvar.");
+        }
+    }
+</script>
+
+</body>
+</html>

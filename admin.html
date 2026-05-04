@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -7,32 +7,23 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 30px; background: #f4f7f6; }
         .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
         
-        .dashboard { display: flex; gap: 15px; margin-bottom: 25px; }
-        .card { flex: 1; padding: 15px; border-radius: 10px; color: white; text-align: center; }
-        .badge-container { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: fit-content; }
-
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-align: center; white-space: nowrap; }
-
-        .controls { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 20px; }
-        input, select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        .search-box { grid-column: span 2; padding: 12px; border: 2px solid #1a73e8; outline: none; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        input, select, textarea { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: inherit; }
+        
+        .search-box { width: 100%; padding: 12px; border: 2px solid #1a73e8; border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 10px; outline: none; }
         
         button { background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         button:hover { opacity: 0.9; }
 
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; }
-        .badge { padding: 4px 8px;border-radius: 4px;font-size: 11px;font-weight: bold;display: inline-block;margin: 2px;text-transform: uppercase; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin: 2px; text-transform: uppercase; }
         .badge-p { background: #e1f5fe; color: #01579b; } 
         .badge-m { background: #e7e9eb; color: #5f1604; }
-        .badge-gg { background: #cae4f0; color: #ee190a; }
         .badge-g { background: #fff3e0; color: #e65100; } 
-
-        .search-box {width: 100%;padding: 12px;border: 2px solid #1a73e8;border-radius: 8px;font-size: 16px;box-sizing: border-box;margin-bottom: 10px;outline: none;}
-
-        .search-box:focus {box-shadow: 0 0 8px rgba(26, 115, 232, 0.4);}
-
+        .badge-gg { background: #cae4f0; color: #ee190a; }
     </style>
 </head>
 <body>
@@ -40,31 +31,37 @@
 <div class="container">
     <h2>📦 Gestão de Estoque de Camisas</h2>
 
-<div class="controls">
-    <input type="text" id="nome" placeholder="Modelo da Camisa">
-    <input type="number" id="preco" placeholder="Preço R$">
-    
-    <input type="number" id="qtd_p" placeholder="Quantidade tamanho P">
-    <input type="number" id="qtd_m" placeholder="Quantidade tamanho M">
-    <input type="number" id="qtd_g" placeholder="Quantidade tamanho G">
-    <input type="number" id="qtd_gg" placeholder="Quantidade tamanho GG">
-    
-    <input type="file" id="foto_input">
-    <button onclick="cadastrarCamisa()">Cadastrar no Estoque</button>
-</div>
+    <div class="controls">
+        <input type="text" id="nome" placeholder="Modelo da Camisa">
+        <input type="number" id="preco" placeholder="Preço R$" step="0.01">
+        
+        <textarea id="descricao" placeholder="Descrição detalhada da camisa..." style="grid-column: span 2; height: 80px;"></textarea>
 
-<div style="margin-bottom: 15px;">
-    <input type="text" id="filtroNome" class="search-box" placeholder="🔍 Filtrar por modelo de camisa..." onkeyup="filtrarTabela()">
+        <input type="number" id="qtd_p" placeholder="Qtd P">
+        <input type="number" id="qtd_m" placeholder="Qtd M">
+        <input type="number" id="qtd_g" placeholder="Qtd G">
+        <input type="number" id="qtd_gg" placeholder="Qtd GG">
+        
+        <div style="grid-column: span 2;">
+            <label><strong>Fotos do Produto (Selecione uma ou mais):</strong></label><br>
+            <input type="file" id="foto_input" multiple accept="image/*" style="margin-top: 10px;">
+        </div>
+        
+        <button onclick="cadastrarCamisa()" style="grid-column: span 2;">Cadastrar no Estoque</button>
+    </div>
 
-</div>
+    <hr>
 
-<div class="table-container">
-    <table>
+    <div style="margin-top: 20px;">
+        <input type="text" id="filtroNome" class="search-box" placeholder="🔍 Filtrar por modelo de camisa..." onkeyup="filtrarTabela()">
+    </div>
+
+    <table id="tabela-camisas">
         <thead>
             <tr>
                 <th>Foto</th>
                 <th>Modelo</th>
-                <th>Tamanho (P/M/G/GG)</th>
+                <th>Estoque</th>
                 <th>Preço</th>
                 <th>Ações</th>
             </tr>
@@ -73,126 +70,95 @@
     </table>
 </div>
 
-<script> 
+<script>
+    const API_URL = 'http://127.0.0.1:5000/camisas';
 
-//js
     async function listarCamisas() {
         try {
-            const res = await fetch('http://127.0.0.1:5000/camisas');
+            const res = await fetch(API_URL);
             const camisas = await res.json();
             const corpo = document.getElementById('tabela-corpo');
             corpo.innerHTML = '';
+
             camisas.forEach(c => {
                 corpo.innerHTML += `
                     <tr>
                         <td><img src="${c.imagem}" class="img-preview" onerror="this.src='https://via.placeholder.com/50'"></td>
                         <td>${c.nome}</td>
                         <td>
-                        <span class="badge badge-p">P: ${c.qtd_p}</span> | <span class="badge badge-m">M: ${c.qtd_m}</span> |
-                        <span class="badge badge-g">G: ${c.qtd_g}</span> | <span class="badge badge-gg">GG: ${c.qtd_gg}</span>
+                            <span class="badge badge-p">P: ${c.qtd_p}</span>
+                            <span class="badge badge-m">M: ${c.qtd_m}</span>
+                            <span class="badge badge-g">G: ${c.qtd_g}</span>
+                            <span class="badge badge-gg">GG: ${c.qtd_gg}</span>
                         </td>
                         <td>R$ ${parseFloat(c.preco).toFixed(2)}</td>
                         <td>
-                            <button onclick="editarCamisa(${c.id}, '${c.nome}', ${c.preco}, ${c.qtd_p}, ${c.qtd_m}, ${c.qtd_g}, ${c.qtd_gg})" style="background:#ffc107; color:black; padding:5px 10px; border-radius:4px; cursor:pointer;">Editar</button>
-                            <button onclick="deletarCamisa(${c.id})" style="background:#dc3545; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:5px;">X</button>
+                            <button onclick="window.location.href='editar_produto.html?id=${c.id}'">✏️</button>
+                            <button onclick="deletarCamisa(${c.id})" style="background:#dc3545;">X</button>
                         </td>
                     </tr>`;
             });
         } catch (error) {
-            console.error("Erro ao listar camisas:", error);
+            console.error("Erro ao listar:", error);
         }
     }
 
     async function cadastrarCamisa() {
         const formData = new FormData();
+        
+
         formData.append('nome', document.getElementById('nome').value);
         formData.append('preco', document.getElementById('preco').value);
+        formData.append('descricao', document.getElementById('descricao').value);
         formData.append('qtd_p', document.getElementById('qtd_p').value || 0);
         formData.append('qtd_m', document.getElementById('qtd_m').value || 0);
         formData.append('qtd_g', document.getElementById('qtd_g').value || 0);
         formData.append('qtd_gg', document.getElementById('qtd_gg').value || 0);
         
-        const foto = document.getElementById('foto_input').files[0];
-        if (foto) formData.append('foto', foto);
+
+        const fotoInput = document.getElementById('foto_input');
+        for (let i = 0; i < fotoInput.files.length; i++) {
+            formData.append('fotos', fotoInput.files[i]);
+        }
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/camisas', {
+            const response = await fetch(API_URL, {
                 method: 'POST',
                 body: formData
             });
 
             if (response.ok) {
-                alert("✅ Camisa adicionada com sucesso!");
-                listarCamisas();
-                document.getElementById('nome').value = '';
-                document.getElementById('preco').value = '';
+                alert("✅ Camisa cadastrada com sucesso!");
+                location.reload(); 
+            } else {
+                const erro = await response.json();
+                alert("Erro: " + erro.erro);
             }
         } catch (error) {
             console.error("Erro na conexão:", error);
         }
     }
 
-    async function editarCamisa(id, nomeAtual, precoAtual, qP, qM, qG, qGG) {
-        const opcao = prompt("O que deseja editar?\n1 - Nome e Preço\n2 - Quantidades de Estoque");
-        let dados = {};
-
-        if (opcao === "1") {
-            const n = prompt("Novo nome:", nomeAtual);
-            const p = prompt("Novo preço:", precoAtual);
-            if (n && p) dados = { nome: n, preco: parseFloat(p) };
-        } else if (opcao === "2") {
-            const nP = prompt("Qtd P:", qP);
-            const nM = prompt("Qtd M:", qM);
-            const nG = prompt("Qtd G:", qG);
-            const nGG = prompt("Qtd GG:", qGG);
-            dados = { qtd_p: nP, qtd_m: nM, qtd_g: nG, qtd_gg: nGG };
-        }
-
-        if (Object.keys(dados).length > 0) {
-            const res = await fetch(`http://127.0.0.1:5000/camisas/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
-            });
-            if (res.ok) { alert("Atualizado!"); listarCamisas(); }
-        }
-    }
-
     async function deletarCamisa(id) {
-        if (confirm("Tem certeza que deseja excluir esta camisa?")) {
-            try {
-                const response = await fetch(`http://127.0.0.1:5000/camisas/${id}`, {
-                    method: 'DELETE'
-                });
-                if (response.ok) {
-                    alert("🗑️ Camisa removida!");
-                    listarCamisas();
-                }
-            } catch (error) {
-                console.error("Erro de conexão:", error);
+        if (confirm("Deseja mesmo excluir este produto?")) {
+            const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                alert("Removido!");
+                listarCamisas();
             }
         }
     }
 
     function filtrarTabela() {
-    const termo = document.getElementById('filtroNome').value.toLowerCase();
-    const tabela = document.getElementById('tabela-corpo');
-    const linhas = tabela.getElementsByTagName('tr');
+        const termo = document.getElementById('filtroNome').value.toLowerCase();
+        const linhas = document.querySelectorAll('#tabela-corpo tr');
 
-    for (let i = 0; i < linhas.length; i++) {
-        const nomeModelo = linhas[i].getElementsByTagName('td')[1];
-        
-        if (nomeModelo) {
-            const texto = nomeModelo.textContent || nomeModelo.innerText;
-
-            if (texto.toLowerCase().indexOf(termo) > -1) {
-                linhas[i].style.display = "";
-            } else {
-                linhas[i].style.display = "none";
-            }
-        }
+        linhas.forEach(linha => {
+            const nome = linha.cells[1].textContent.toLowerCase();
+            linha.style.display = nome.includes(termo) ? "" : "none";
+        });
     }
-}
+
     window.onload = listarCamisas;
 </script>
 </body>
