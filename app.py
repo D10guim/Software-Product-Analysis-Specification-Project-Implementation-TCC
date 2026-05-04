@@ -38,12 +38,12 @@ class Camisa(db.Model):
             "preco": self.preco,
             "descricao": self.descricao, 
             "imagem": self.imagem_url,
-            "outras_fotos": [img.url for img in self.imagens],  
+            "outras_fotos": [{"id": img.id, "url": img.url} for img in self.imagens], 
             "qtd_p": self.qtd_p, 
             "qtd_m": self.qtd_m, 
             "qtd_g": self.qtd_g, 
             "qtd_gg": self.qtd_gg
-        }
+    }
 
 class ImagemCamisa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -56,11 +56,12 @@ class Fornecedor(db.Model):
     senha = db.Column(db.String(100), nullable=False)
 
 class Avaliacao(db.Model):
+    __tablename__ = 'avaliacao'
     id = db.Column(db.Integer, primary_key=True)
     camisa_id = db.Column(db.Integer, db.ForeignKey('camisa.id'), nullable=False)
-    cliente_nome = db.Column(db.String(100), nullable=False)
+    nome = db.Column(db.String(100), nullable=False)
     nota = db.Column(db.Integer, nullable=False)
-    comentario = db.Column(db.Text)
+    comentario = db.Column(db.Text, nullable=False)
 
 @app.route('/uploads/<filename>')
 def servir_imagem(filename):
@@ -178,17 +179,46 @@ def login():
 
 @app.route('/avaliar', methods=['POST'])
 def avaliar():
-    dados = request.json
     try:
+        dados = request.get_json() 
+        if not dados:
+            return jsonify({"error": "Dados não recebidos"}), 400
+            
         nova_aval = Avaliacao(
-            camisa_id=dados['camisa_id'],
-            cliente_nome=dados['nome'],
-            nota=dados['nota'],
+            camisa_id=int(dados['camisa_id']), 
+            nome=dados['nome'],
+            nota=int(dados['nota']),           
             comentario=dados['comentario']
         )
         db.session.add(nova_aval)
         db.session.commit()
-        return jsonify({"msg": "Avaliação salva com sucesso!"}), 201
+        return jsonify({"message": "Sucesso!"}), 201
+    except Exception as e:
+        print(f"Erro no Servidor: {e}") 
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    
+@app.route('/avaliacoes/<int:camisa_id>', methods=['GET'])
+def listar_avaliacoes(camisa_id):
+    avals = Avaliacao.query.filter_by(camisa_id=camisa_id).all()
+    return jsonify([{
+        "nome": a.nome, 
+        "nota": a.nota, 
+        "comentario": a.comentario
+    } for a in avals])    
+    
+@app.route('/fotos/<int:foto_id>', methods=['DELETE'])
+def deletar_foto(foto_id):
+    try:
+        foto = ImagemCamisa.query.get(foto_id)
+        if not foto:
+            return jsonify({"erro": "Foto não encontrada"}), 404
+        
+        # Opcional: deletar o arquivo físico da pasta uploads aqui
+        
+        db.session.delete(foto)
+        db.session.commit()
+        return jsonify({"msg": "Foto removida com sucesso"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"erro": str(e)}), 400
