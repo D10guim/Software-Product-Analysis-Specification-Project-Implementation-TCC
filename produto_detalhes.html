@@ -58,7 +58,6 @@
             </div>
         </div>
     </div>
-    <div id="lista-comentarios"></div>
 </div>
 
     <div id="lista-comentarios" style="margin-top: 20px;">
@@ -163,7 +162,6 @@
             `).join('');
 
         } else {
-            // CASO NÃO TENHA AVALIAÇÕES
             mediaTexto.innerText = "0.0";
             barraQualidade.style.width = "0%";
             estrelasMedia.innerText = "☆☆☆☆☆";
@@ -181,25 +179,28 @@
     }
 
     async function enviarAvaliacao() {
-        const nome = document.getElementById('aval_nome').value;
-        const nota = document.getElementById('aval_nota').value;
-        const comentario = document.getElementById('aval_comentario').value;
+    const nome = document.getElementById('aval_nome').value;
+    const nota = document.getElementById('aval_nota').value;
+    const comentario = document.getElementById('aval_comentario').value;
 
-        if(!nome || !comentario) {
-            alert("Por favor, preencha seu nome e o comentário.");
-            return;
-        }
+    if(!nome || !comentario) {
+        alert("Por favor, preencha seu nome e o comentário.");
+        return;
+    }
 
-        const dados = {
-            camisa_id: camisaId,
-            nome: nome,
-            nota: parseInt(nota),
-            comentario: comentario
-        };
+    const dados = {
+        camisa_id: parseInt(camisaId), 
+        nome: nome,
+        nota: parseInt(nota),
+        comentario: comentario
+    };
 
+    try {
         const res = await fetch('http://127.0.0.1:5000/avaliar', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(dados)
         });
 
@@ -207,7 +208,13 @@
             alert("Obrigado pela sua avaliação!");
             location.reload();
         } else {
-            alert("Erro ao enviar avaliação.");
+            const erroServidor = await res.json();
+            console.error("Detalhes do erro no Flask:", erroServidor);
+            alert("Erro ao enviar: " + (erroServidor.error || "Verifique o console do VS Code"));
+        }
+        } catch (e) {
+            console.error("Erro de conexão:", e);
+            alert("Não foi possível conectar ao servidor.");
         }
     }
 
