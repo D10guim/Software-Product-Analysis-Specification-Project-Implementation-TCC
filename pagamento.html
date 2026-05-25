@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Finalizar Pedido - Camisa 10</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; padding: 40px; margin: 0; }
+        .checkout-container { max-width: 900px; margin: auto; display: flex; gap: 30px; }
+        
+        .coluna-dados { flex: 1.5; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .coluna-resumo { flex: 1; background: #fff; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); height: fit-content; border: 2px solid #1a73e8; }
+        
+        h3 { margin-top: 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0 18px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        
+        .item-resumo { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
+        .total-container { display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; color: #1a73e8; margin-top: 20px; }
+        
+        .btn-concluir { background: #28a745; color: white; border: none; padding: 16px; width: 100%; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 20px; }
+        .btn-concluir:hover { background: #218838; }
+    </style>
+</head>
+<body>
+
+<script src="auth_header.js"></script>
+
+<div class="checkout-container">
+    <div class="coluna-dados">
+        <h3>1. Endereço de Entrega</h3>
+        <input type="text" id="cep" placeholder="CEP (Ex: 00000-000)" required>
+        <input type="text" id="logradouro" placeholder="Rua / Avenida" required>
+        <input type="text" id="numero" placeholder="Número" required>
+        <input type="text" id="bairro" placeholder="Bairro" required>
+        <input type="text" id="cidade" placeholder="Cidade" required>
+
+        <h3>2. Forma de Pagamento</h3>
+        <select id="formaPagamento">
+            <option value="Pix">Pix (Aprovação Imediata)</option>
+            <option value="Cartão de Crédito">Cartão de Crédito (Até 12x)</option>
+            <option value="Boleto Bancário">Boleto Bancário</option>
+        </select>
+    </div>
+
+    <div class="coluna-resumo">
+        <h3>Resumo do Pedido</h3>
+        <div id="itensCheckout">
+            </div>
+        <div class="total-container">
+            <span>Total:</span>
+            <span id="valorTotal">R$ 0.00</span>
+        </div>
+        
+        <button class="btn-concluir" onclick="processarPedidoCompleto()">Finalizar Compra 💳</button>
+        <button onclick="window.location.href='cliente.html'" style="background:none; border:none; color:#666; width:100%; text-align:center; margin-top:15px; cursor:pointer;">Cancelar e voltar</button>
+    </div>
+</div>
+
+<script>
+    let precoTotalPedido = 0;
+
+    function carregarResumo() {
+        const carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+        const container = document.getElementById('itensCheckout');
+        const txtTotal = document.getElementById('valorTotal');
+        
+        container.innerHTML = "";
+        precoTotalPedido = 0;
+
+        if (carrinho.length === 0) {
+            container.innerHTML = "<p style='color:#999;'>Nenhum produto selecionado.</p>";
+            return;
+        }
+
+        carrinho.forEach(item => {
+            const subtotal = item.preco * item.quantidade;
+            precoTotalPedido += subtotal;
+
+            container.innerHTML += `
+                <div class="item-resumo">
+                    <div>
+                        <strong>${item.nome}</strong><br>
+                        <small>Tam: ${item.tamanho} | Qtd: ${item.quantidade}</small>
+                    </div>
+                    <span>R$ ${subtotal.toFixed(2)}</span>
+                </div>
+            `;
+        });
+
+        txtTotal.innerText = `R$ ${precoTotalPedido.toFixed(2)}`;
+    }
+
+    async function processarPedidoCompleto() {
+        const clienteId = localStorage.getItem('cliente_id');
+        const carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+
+        if (!clienteId) {
+            alert("Sua sessão expirou. Identifique-se novamente.");
+            window.location.href = "cadastro_de_login_cliente.html";
+            return;
+        }
+
+        if (carrinho.length === 0) {
+            alert("O seu carrinho está vazio! Volte para a vitrine.");
+            window.location.href = "cliente.html";
+            return;
+        }
+
+        const cep = document.getElementById('cep').value.trim();
+        const rua = document.getElementById('logradouro').value.trim();
+        const num = document.getElementById('numero').value.trim();
+        
+        if(!cep || !rua || !num) {
+            alert("Por favor, preencha os dados do endereço de entrega.");
+            return;
+        }
+
+        const payload = {
+            cliente_id: parseInt(clienteId),
+            total: precoTotalPedido,
+            itens: carrinho.map(item => ({
+                camisa_id: item.camisa_id,
+                quantidade: item.quantidade,
+                preco: item.preco
+            }))
+        };
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/registrar-venda', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const resposta = await res.json();
+
+            if (res.ok) {
+                alert(`Sucesso! Pedido #${resposta.pedido_id} gerado.\nObrigado por comprar na Camisa 10!`);
+                localStorage.removeItem('carrinho'); 
+                window.location.href = "cliente.html"; 
+            } else {
+                alert("Erro ao salvar venda: " + (resposta.error || "Tente novamente"));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erro catastrófico de rede ou o servidor Flask caiu.");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", carregarResumo);
+</script>
+</body>
+</html>

@@ -5,9 +5,32 @@
     <title>Detalhes do Produto - Camisa 10</title>
     <style>
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; padding: 40px; margin: 0; }
-        .container-detalhes { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 20px; display: flex; gap: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .container-detalhes { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 20px; display: flex; gap: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; }
         
-        /* Galeria */
+        /* Estilização do Botão de Carrinho abaixo do Tamanho */
+        .botao-carrinho-container {
+            border: 2px solid #1a73e8;
+            border-radius: 12px;
+            background: white;
+            color: #1a73e8;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-top: 15px;
+            width: fit-content;
+        }
+        .botao-carrinho-container:hover {
+            background: #1a73e8;
+            color: white;
+        }
+        .botao-carrinho-container .emoji { font-size: 22px; margin-bottom: 2px; }
+        .botao-carrinho-container .texto-carrinho { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
         .galeria { flex: 1; }
         .foto-principal-container { width: 100%; height: 450px; background: #f9f9f9; border-radius: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .foto-principal { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -15,11 +38,13 @@
         .miniaturas img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
         .miniaturas img.active { border-color: #1a73e8; }
         
-        .info-detalhes { flex: 1; }
+        .info-detalhes { flex: 1; display: flex; flex-direction: column; }
         .preco { font-size: 32px; color: #1a73e8; font-weight: bold; margin: 10px 0; }
-        .btn-comprar { background: #28a745; color: white; padding: 18px; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; }
+        .btn-comprar { background: #28a745; color: white; padding: 18px; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; transition: 0.3s; }
+        .btn-comprar:hover { background: #218838; }
 
-        /* Avaliações */
+        select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; background: white; }
+
         .avaliacoes-container { max-width: 1000px; margin: 30px auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .resumo-notas { display: flex; gap: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px; align-items: center; }
         .nota-geral .grande { font-size: 48px; font-weight: bold; color: #333; }
@@ -30,7 +55,6 @@
         .labels { display: flex; justify-content: space-between; font-size: 11px; color: #777; }
         .atributo-item { margin-bottom: 20px; width: 300px; }
 
-        /* Formulário de Avaliar */
         .form-avaliar { margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; }
         .form-avaliar input, .form-avaliar textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-enviar-aval { background: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
@@ -38,8 +62,11 @@
 </head>
 <body>
 
-<div class="container-detalhes" id="detalhes-produto">
-    </div>
+<script src="auth_header.js"></script>
+
+<div class="container-detalhes">
+    <div id="detalhes-produto" style="display: flex; gap: 40px; width: 100%;"></div>
+</div>
 
 <div class="avaliacoes-container">
     <div class="resumo-notas">
@@ -58,15 +85,13 @@
             </div>
         </div>
     </div>
-</div>
 
-    <div id="lista-comentarios" style="margin-top: 20px;">
-        </div>
+    <div id="lista-comentarios" style="margin-top: 20px;"></div>
 
     <div class="form-avaliar">
         <h3>Deixe sua avaliação</h3>
         <input type="text" id="aval_nome" placeholder="Seu nome">
-        <select id="aval_nota" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+        <select id="aval_nota">
             <option value="5">5 Estrelas (Excelente)</option>
             <option value="4">4 Estrelas (Muito Bom)</option>
             <option value="3">3 Estrelas (Bom)</option>
@@ -81,6 +106,7 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const camisaId = urlParams.get('id');
+    let produtoAtual = null;
 
     async function carregarDados() {
         try {
@@ -89,6 +115,7 @@
             const c = camisas.find(item => item.id == camisaId);
 
             if (c) {
+                produtoAtual = c; 
                 let miniaturasHtml = `<img src="${c.imagem}" class="active" onclick="trocarFoto(this, '${c.imagem}')">`;
                 
                 if (c.outras_fotos && c.outras_fotos.length > 0) {
@@ -107,19 +134,25 @@
                     </div>
                     <div class="info-detalhes">
                         <h1>${c.nome}</h1>
-                        <p class="preco">R$ ${c.preco.toFixed(2)}</p>
+                        <p class="preco">R$ ${Number(c.preco).toFixed(2)}</p>
                         <p style="color:#555; line-height:1.6;">${c.descricao || 'Camisa de alta qualidade, ideal para o dia a dia.'}</p>
                         
-                        <div style="margin: 20px 0; display:flex; gap:10px;">
-                            <span style="background:#eee; padding:5px 10px; border-radius:5px;">P: ${c.qtd_p}</span>
-                            <span style="background:#eee; padding:5px 10px; border-radius:5px;">M: ${c.qtd_m}</span>
-                            <span style="background:#eee; padding:5px 10px; border-radius:5px;">G: ${c.qtd_g}</span>
-                            <span style="background:#eee; padding:5px 10px; border-radius:5px;">GG: ${c.qtd_gg}</span>
+                        <label><b>Escolha o Tamanho:</b></label>
+                        <select id="tamanhoSelecionado">
+                            ${c.qtd_p > 0 ? '<option value="P">P (Disponível: ' + c.qtd_p + ')</option>' : ''}
+                            ${c.qtd_m > 0 ? '<option value="M">M (Disponível: ' + c.qtd_m + ')</option>' : ''}
+                            ${c.qtd_g > 0 ? '<option value="G">G (Disponível: ' + c.qtd_g + ')</option>' : ''}
+                            ${c.qtd_gg > 0 ? '<option value="GG">GG (Disponível: ' + c.qtd_gg + ')</option>' : ''}
+                        </select>
+
+                        <div class="botao-carrinho-container" onclick="verificarCarrinhoDireto()">
+                            <span class="emoji">🛒</span>
+                            <span class="texto-carrinho">Carrinho</span>
                         </div>
 
-                        <button class="btn-comprar">Comprar Agora</button>
+                        <button class="btn-comprar" onclick="validarEProcessarCompra()">Comprar Agora</button>
                         <br>
-                        <button onclick="window.location.href='cliente.html'" style="background:none; border:none; color:#1a73e8; cursor:pointer; margin-top:15px; font-weight:bold;">← Voltar para a loja</button>
+                        <button onclick="window.location.href='cliente.html'" style="background:none; border:none; color:#1a73e8; cursor:pointer; margin-top:15px; font-weight:bold; padding:0; text-align:left;">← Voltar para a loja</button>
                     </div>
                 `;
 
@@ -131,42 +164,83 @@
             console.error("Erro ao carregar dados:", erro);
         }
     }
+    
+    function validarEProcessarCompra() {
+        const clienteId = localStorage.getItem('cliente_id');
+
+        if (!clienteId) {
+            alert("Atenção: Você precisa estar logado/identificado para concluir a compra!");
+            window.location.href = "cadastro_de_login_cliente.html";
+            return;
+        }
+
+        const tamanhoSelect = document.getElementById('tamanhoSelecionado');
+        if (tamanhoSelect && produtoAtual) {
+            const tamanho = tamanhoSelect.value;
+            
+            if (!tamanho) {
+                alert("Desculpe, este tamanho ou produto encontra-se esgotado no estoque.");
+                return;
+            }
+
+            let carrinho = []; 
+            carrinho.push({
+                camisa_id: produtoAtual.id,
+                nome: produtoAtual.nome,
+                preco: produtoAtual.preco,
+                tamanho: tamanho,
+                whitespace_fix: true,
+                quantidade: 1
+            });
+
+            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+        }
+
+        window.location.href = "pagamento.html";
+    }
+
+    function verificarCarrinhoDireto() {
+        const clienteId = localStorage.getItem('cliente_id');
+        if (!clienteId) {
+            alert("Por favor, faça login para ver seu carrinho.");
+            window.location.href = "cadastro_de_login_cliente.html";
+        } else {
+            window.location.href = "pagamento.html";
+        }
+    }
 
     async function carregarAvaliacoes() {
-    try {
-        const res = await fetch(`http://127.0.0.1:5000/avaliacoes/${camisaId}`);
-        const avals = await res.json();
-        
-        const mediaTexto = document.getElementById('media-nota');
-        const barraQualidade = document.getElementById('barra-qualidade');
-        const estrelasMedia = document.getElementById('estrelas-media');
-        const listaDiv = document.getElementById('lista-comentarios');
-
-        if (avals && avals.length > 0) {
-            const soma = avals.reduce((acc, a) => acc + a.nota, 0);
-            const media = (soma / avals.length).toFixed(1);
+        try {
+            const res = await fetch(`http://127.0.0.1:5000/avaliacoes/${camisaId}`);
+            const avals = await res.json();
             
-            mediaTexto.innerText = media;
-            
-            const porcentagem = (media / 5) * 100;
-            barraQualidade.style.width = porcentagem + "%";
+            const mediaTexto = document.getElementById('media-nota');
+            const barraQualidade = document.getElementById('barra-qualidade');
+            const estrelasMedia = document.getElementById('estrelas-media');
+            const listaDiv = document.getElementById('lista-comentarios');
 
-            estrelasMedia.innerText = '★'.repeat(Math.round(media)) + '☆'.repeat(5 - Math.round(media));
+            if (avals && avals.length > 0) {
+                const soma = avals.reduce((acc, a) => acc + a.nota, 0);
+                const media = (soma / avals.length).toFixed(1);
+                
+                mediaTexto.innerText = media;
+                const porcentagem = (media / 5) * 100;
+                barraQualidade.style.width = porcentagem + "%";
+                estrelasMedia.innerText = '★'.repeat(Math.round(media)) + '☆'.repeat(5 - Math.round(media));
 
-            listaDiv.innerHTML = avals.map(a => `
-                <div class="comentario-card" style="border-bottom: 1px solid #eee; padding: 15px 0;">
-                    <strong>${a.nome}</strong> 
-                    <span style="color:#f1c40f;">${'★'.repeat(a.nota)}${'☆'.repeat(5-a.nota)}</span>
-                    <p>${a.comentario}</p>
-                </div>
-            `).join('');
-
-        } else {
-            mediaTexto.innerText = "0.0";
-            barraQualidade.style.width = "0%";
-            estrelasMedia.innerText = "☆☆☆☆☆";
-            listaDiv.innerHTML = "<p style='color:#888'>Nenhuma avaliação para este produto ainda.</p>";
-        }
+                listaDiv.innerHTML = avals.map(a => `
+                    <div class="comentario-card" style="border-bottom: 1px solid #eee; padding: 15px 0;">
+                        <strong>${a.nome || 'Anônimo'}</strong> 
+                        <span style="color:#f1c40f;">${'★'.repeat(a.nota)}${'☆'.repeat(5-a.nota)}</span>
+                        <p>${a.comentario}</p>
+                    </div>
+                `).join('');
+            } else {
+                mediaTexto.innerText = "0.0";
+                barraQualidade.style.width = "0%";
+                estrelasMedia.innerText = "☆☆☆☆☆";
+                listaDiv.innerHTML = "<p style='color:#888'>Nenhuma avaliação para este produto ainda.</p>";
+            }
         } catch (e) {
             console.error("Erro ao carregar avaliações:", e);
         }
@@ -179,41 +253,37 @@
     }
 
     async function enviarAvaliacao() {
-    const nome = document.getElementById('aval_nome').value;
-    const nota = document.getElementById('aval_nota').value;
-    const comentario = document.getElementById('aval_comentario').value;
+        const nome = document.getElementById('aval_nome').value;
+        const nota = document.getElementById('aval_nota').value;
+        const comentario = document.getElementById('aval_comentario').value;
 
-    if(!nome || !comentario) {
-        alert("Por favor, preencha seu nome e o comentário.");
-        return;
-    }
-
-    const dados = {
-        camisa_id: parseInt(camisaId), 
-        nome: nome,
-        nota: parseInt(nota),
-        comentario: comentario
-    };
-
-    try {
-        const res = await fetch('http://127.0.0.1:5000/avaliar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dados)
-        });
-
-        if (res.ok) {
-            alert("Obrigado pela sua avaliação!");
-            location.reload();
-        } else {
-            const erroServidor = await res.json();
-            console.error("Detalhes do erro no Flask:", erroServidor);
-            alert("Erro ao enviar: " + (erroServidor.error || "Verifique o console do VS Code"));
+        if(!nome || !comentario) {
+            alert("Por favor, preencha seu nome e o comentário.");
+            return;
         }
+
+        const dados = {
+            camisa_id: parseInt(camisaId), 
+            nome: nome,
+            nota: parseInt(nota),
+            comentario: comentario
+        };
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/avaliar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
+
+            if (res.ok) {
+                alert("Obrigado pela sua avaliação!");
+                location.reload();
+            } else {
+                const erroServidor = await res.json();
+                alert("Erro ao enviar: " + (erroServidor.error || "Tente novamente"));
+            }
         } catch (e) {
-            console.error("Erro de conexão:", e);
             alert("Não foi possível conectar ao servidor.");
         }
     }

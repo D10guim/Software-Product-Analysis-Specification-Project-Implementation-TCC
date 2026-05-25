@@ -1,0 +1,166 @@
+HTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Identificação - Camisa 10</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; padding: 40px; margin: 0; }
+        .container-autenticacao { max-width: 900px; margin: 50px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        
+        .titulo-pagina { text-align: center; color: #333; margin-bottom: 40px; }
+        .titulo-pagina h2 { margin: 0 0 10px 0; font-size: 28px; }
+        .titulo-pagina p { margin: 0; color: #777; font-size: 15px; }
+
+        .colunas-auth { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
+        .coluna { display: flex; flex-direction: column; }
+        .coluna-esquerda { border-right: 2px solid #eee; padding-right: 50px; }
+        
+        .coluna h3 { margin-top: 0; color: #1a73e8; font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px; }
+        
+        .form-group { display: flex; flex-direction: column; margin-bottom: 18px; }
+        .form-group label { font-weight: bold; font-size: 14px; color: #555; margin-bottom: 8px; }
+        .form-group input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; transition: 0.2s; box-sizing: border-box; width: 100%; }
+        .form-group input:focus { border-color: #1a73e8; box-shadow: 0 0 5px rgba(26,115,232,0.2); }
+
+        .btn-auth { color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
+        .btn-login { background: #28a745; }
+        .btn-login:hover { background: #218838; }
+        .btn-cadastro { background: #1a73e8; }
+        .btn-cadastro:hover { background: #155cb4; }
+
+        .btn-voltar { background: none; border: none; color: #1a73e8; cursor: pointer; font-weight: bold; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 5px; padding: 0; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container-autenticacao">
+    <button onclick="window.location.href='cliente.html'" class="btn-voltar">← Voltar para a loja</button>
+
+    <div class="titulo-pagina">
+        <h2>Bem-vindo à Camisa 10</h2>
+        <p>Identifique-se abaixo para gerenciar seu perfil ou finalizar suas compras</p>
+    </div>
+
+    <div class="colunas-auth">
+        <div class="coluna coluna-esquerda">
+            <h3>Já sou cliente</h3>
+            <form onsubmit="executarLoginPagina(event)">
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" id="auth_login_email" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="auth_login_senha" placeholder="Sua senha" required>
+                </div>
+                <button type="submit" class="btn-auth btn-login">Entrar na Conta</button>
+            </form>
+        </div>
+
+        <div class="coluna">
+            <h3>Criar uma nova conta</h3>
+            <form onsubmit="executarCadastroPagina(event)">
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="cad_nome" placeholder="Seu nome completo" required>
+                </div>
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" id="cad_email" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="cad_senha" placeholder="Crie uma senha segura" required>
+                </div>
+                <div class="form-group">
+                    <label>Data de Nascimento</label>
+                    <input type="date" id="cad_nascimento" required>
+                </div>
+                <button type="submit" class="btn-auth btn-cadastro">Cadastrar e Entrar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function executarLoginPagina(event) {
+        event.preventDefault();
+
+        const email = document.getElementById('auth_login_email').value.trim();
+        const senha = document.getElementById('auth_login_senha').value;
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/login-cliente', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, senha })
+            });
+            const dados = await res.json();
+
+            if (res.ok) {
+                localStorage.setItem('cliente_id', dados.cliente_id);
+                localStorage.setItem('cliente_nome', dados.nome);
+                alert("Login realizado com sucesso!");
+                
+                redirecionarAposAutenticacao();
+            } else {
+                alert(dados.error || "E-mail ou senha incorretos.");
+            }
+        } catch (e) {
+            alert("Erro ao conectar com o servidor Flask.");
+        }
+    }
+
+    async function executarCadastroPagina(event) {
+        event.preventDefault();
+
+        const nome = document.getElementById('cad_nome').value.trim();
+        const email = document.getElementById('cad_email').value.trim();
+        const senha = document.getElementById('cad_senha').value;
+        const data_nascimento = document.getElementById('cad_nascimento').value;
+
+        const dadosCadastro = { nome, email, senha, data_nascimento };
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosCadastro)
+            });
+            const dados = await res.json();
+
+            if (res.ok) {
+                alert("Cadastro realizado com sucesso! Fazendo login automático...");
+                
+                localStorage.setItem('cliente_id', dados.cliente_id || dados.id);
+                localStorage.setItem('cliente_nome', nome);
+                
+                redirecionarAposAutenticacao();
+            } else {
+                alert(dados.error || "Não foi possível realizar o cadastro. Verifique os dados.");
+            }
+        } catch (e) {
+            alert("Erro ao conectar com o servidor Flask.");
+        }
+    }
+
+    function redirecionarAposAutenticacao() {
+        const carrinhoSalvo = localStorage.getItem('carrinho');
+        
+        if (carrinhoSalvo && JSON.parse(carrinhoSalvo).length > 0) {
+            window.location.href = "pagamento.html";
+        } else {
+            window.location.href = "perfil.html";
+        }
+    }
+
+    window.onload = function() {
+        const clienteId = localStorage.getItem('cliente_id');
+        if (clienteId && clienteId !== "null" && clienteId !== "undefined" && clienteId.trim() !== "") {
+            window.location.href = "perfil.html";
+        }
+    }
+</script>
+</body>
+</html>

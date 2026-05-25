@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -8,23 +7,9 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
         header { text-align: center; padding: 40px 0; background: #1a73e8; color: white; border-radius: 0 0 20px 20px; margin: -20px -20px 30px -20px; }
         
-        .vitrine { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 25px; 
-            max-width: 1200px; 
-            margin: auto; 
-        }
+        .vitrine { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; max-width: 1200px; margin: auto;  }
 
-        .card-produto { 
-            background: white; 
-            border-radius: 15px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            transition: transform 0.3s;
-            display: flex;
-            flex-direction: column;
-        }
+        .card-produto { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);  transition: transform 0.3s; display: flex; flex-direction: column; }
 
         .card-produto:hover { transform: translateY(-5px); }
 
@@ -34,37 +19,24 @@
         .info h3 { margin: 10px 0; color: #333; }
         .info .preco { color: #1a73e8; font-size: 22px; font-weight: bold; margin: 10px 0; }
         
-        .btn-avaliar { 
-            background: #ffc107; 
-            color: #000; 
-            border: none; 
-            padding: 12px; 
-            width: 100%; 
-            cursor: pointer; 
-            font-weight: bold;
-            transition: background 0.3s;
-        }
+        .btn-avaliar { background: #ffc107; color: #000; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; transition: background 0.3s; }
         .btn-avaliar:hover { background: #e0a800; }
 
-        .galeria-cliente { display: flex; flex-direction: column; gap: 10px; }
-        .foto-principal { width: 100%; max-height: 400px; object-fit: contain; border-radius: 10px; background: #fff; }
-        .miniaturas { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0; }
-        .miniaturas img { width: 70px; height: 70px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: 0.2s;}.miniaturas img:hover { border-color: #1a73e8; }
-
-        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; }
         .modal-content input, .modal-content textarea { width: 100%; margin-bottom: 15px; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 8px; }
     </style>
 </head>
 <body>
 
+<script src="auth_header.js"></script>
+
 <header>
     <h1>Camisa 10 - Oficial</h1>
     <p>As melhores camisas de time direto para você</p>
 </header>
 
-<div class="vitrine" id="vitrine">
-    </div>
+<div class="vitrine" id="vitrine"></div>
 
 <div id="modalAvaliacao" class="modal">
     <div class="modal-content">
@@ -93,23 +65,23 @@
             camisas.forEach(c => {
                 vitrine.innerHTML += `
                 <div class="card-produto" style="position: relative;">
-                    <div onclick="adicionarAoCarrinho(${c.id})" 
-                        style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;">
-                🛒
+                    <div onclick="adicionarAoCarrinho(${c.id}, '${c.nome.replace(/'/g, "\\'")}', ${c.preco})" 
+                         style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;" title="Adicionar ao Carrinho">
+                        🛒
                     </div>
 
                     <a href="produto_detalhes.html?id=${c.id}" style="text-decoration: none; color: inherit;">
                         <img src="${c.imagem}" alt="${c.nome}">
                         <div class="info">
                             <h3>${c.nome}</h3>
-                            <p class="preco">R$ ${c.preco.toFixed(2)}</p>
+                            <p class="preco">R$ ${Number(c.preco).toFixed(2)}</p>
                         </div>
                     </a>
             
                     <button class="btn-avaliar" onclick="abrirModal(${c.id})">⭐ Avaliar Produto</button>
                 </div>
-    `;
-});
+                `;
+            });
         } catch (error) {
             console.error("Erro ao carregar vitrine:", error);
         }
@@ -149,6 +121,7 @@
             if (res.ok) {
                 alert("Obrigado! Sua avaliação foi salva.");
                 fecharModal();
+                location.reload();
             } else {
                 alert("Erro ao enviar avaliação.");
             }
@@ -157,39 +130,25 @@
         }
     }
 
-    function adicionarAoCarrinho(id) {
-    alert("Produto " + id + " adicionado ao carrinho!");
+    function adicionarAoCarrinho(id, nome, preco) {
+        alert(`Camisa ${nome} adicionada ao carrinho!`);
+        
+        let carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+        const itemExistente = carrinho.find(i => i.camisa_id === id && i.tamanho === 'M');
+
+        if (itemExistente) {
+            itemExistente.quantidade += 1;
+        } else {
+            carrinho.push({
+                camisa_id: id,
+                nome: nome,
+                preco: parseFloat(preco),
+                tamanho: 'M',
+                quantidade: 1
+            });
+        }
+        localStorage.setItem('carrinho', JSON.stringify(carrinho));
     }
-
-    function mostrarDetalhes(c) {
-    let htmlMiniaturas = `<img src="${c.imagem}" onclick="trocarFoto('${c.imagem}')">`;
-    
-    if (c.outras_fotos && c.outras_fotos.length > 0) {
-        c.outras_fotos.forEach(foto => {
-            htmlMiniaturas += `<img src="${foto.url}" onclick="trocarFoto('${foto.url}')">`;
-        });
-    }
-
-    const container = document.getElementById('detalhes-produto');
-    container.innerHTML = `
-        <div class="galeria-cliente">
-            <img src="${c.imagem}" id="fotoPrincipal" class="foto-principal">
-            <div class="miniaturas">
-                ${htmlMiniaturas}
-            </div>
-        </div>
-        <div class="info-produto">
-            <h1>${c.nome}</h1>
-            <p class="preco">R$ ${c.preco.toFixed(2)}</p>
-            <p class="descricao">${c.descricao || 'Sem descrição disponível.'}</p>
-            </div>
-    `;
-}
-
-function trocarFoto(url) {
-    document.getElementById('fotoPrincipal').src = url;
-}
 </script>
-
 </body>
 </html>
