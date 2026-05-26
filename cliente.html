@@ -8,11 +8,8 @@
         header { text-align: center; padding: 40px 0; background: #1a73e8; color: white; border-radius: 0 0 20px 20px; margin: -20px -20px 30px -20px; }
         
         .vitrine { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; max-width: 1200px; margin: auto;  }
-
         .card-produto { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);  transition: transform 0.3s; display: flex; flex-direction: column; }
-
         .card-produto:hover { transform: translateY(-5px); }
-
         .card-produto img { width: 100%; height: 250px; object-fit: cover; }
 
         .info { padding: 20px; text-align: center; flex-grow: 1; }
@@ -21,6 +18,8 @@
         
         .btn-avaliar { background: #ffc107; color: #000; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; transition: background 0.3s; }
         .btn-avaliar:hover { background: #e0a800; }
+
+        .tag-nota { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.75); color: #ffc107; padding: 5px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;}
 
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; text-align: center; }
@@ -62,28 +61,42 @@
             const vitrine = document.getElementById('vitrine');
             vitrine.innerHTML = "";
 
+            console.log("Dados recebidos do Flask:", camisas);
+
             camisas.forEach(c => {
+                const urlImagem = c.imagem_url || c.imagem || 'https://picsum.photos/250';
+
+                const notaBruta = c.media_nota !== undefined ? c.media_nota : 
+                  (c.nota_media !== undefined ? c.nota_media : 
+                  (c.nota !== undefined ? c.nota : 0));
+                const notaFixada = Number(notaBruta).toFixed(1);
+
                 vitrine.innerHTML += `
                 <div class="card-produto" style="position: relative;">
+                    <div class="tag-nota" title="Média de avaliações">
+                        ⭐ ${notaFixada}
+                    </div>
+
                     <div onclick="adicionarAoCarrinho(${c.id}, '${c.nome.replace(/'/g, "\\'")}', ${c.preco})" 
                          style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;" title="Adicionar ao Carrinho">
                         🛒
                     </div>
 
                     <a href="produto_detalhes.html?id=${c.id}" style="text-decoration: none; color: inherit;">
-                        <img src="${c.imagem}" alt="${c.nome}">
+                        <img src="${urlImagem}" alt="${c.nome}">
                         <div class="info">
                             <h3>${c.nome}</h3>
                             <p class="preco">R$ ${Number(c.preco).toFixed(2)}</p>
                         </div>
                     </a>
-            
+                    
                     <button class="btn-avaliar" onclick="abrirModal(${c.id})">⭐ Avaliar Produto</button>
                 </div>
                 `;
             });
         } catch (error) {
             console.error("Erro ao carregar vitrine:", error);
+            document.getElementById('vitrine').innerHTML = "<p style='text-align:center; color:red;'>Erro ao carregar os produtos do servidor.</p>";
         }
     }
 
@@ -141,7 +154,7 @@
         } else {
             carrinho.push({
                 camisa_id: id,
-                nome: nome,
+                name: nome,
                 preco: parseFloat(preco),
                 tamanho: 'M',
                 quantidade: 1

@@ -43,7 +43,7 @@
 
     <div class="header-perfil">
         <div class="avatar-container">
-            <img src="https://via.placeholder.com/150" id="foto-usuario" class="avatar-img" alt="Foto de perfil">
+            <img src="https://picsum.photos/150" id="foto-usuario" class="avatar-img" alt="Foto de perfil">
             <label for="input-foto" class="btn-upload-foto">📷</label>
             <input type="file" id="input-foto" accept="image/*" onchange="previsualizarFoto(this)">
         </div>
@@ -57,7 +57,7 @@
         <div class="grid-form">
             <div class="form-group full-width">
                 <label>Nome Completo</label>
-                <input type="text" id="perfil-nome" disabled style="background: #f1f3f4; color: #666;">
+                <input type="text" id="perfil-nome" placeholder="Seu nome">
             </div>
             <div class="form-group">
                 <label>E-mail</label>
@@ -66,6 +66,10 @@
             <div class="form-group">
                 <label>Nova Senha</label>
                 <input type="password" id="perfil-senha" placeholder="Digite uma nova senha para alterar">
+            </div>
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="tel" id="perfil-telefone" placeholder="(00) 00000-0000">
             </div>
             <div class="form-group">
                 <label>Data de Nascimento</label>
@@ -85,6 +89,7 @@
 
 <script>
     const clienteId = localStorage.getItem('cliente_id');
+    const nomeSalvoLocal = localStorage.getItem('cliente_nome');
 
     if (!clienteId || clienteId === "null" || clienteId === "undefined" || clienteId.trim() === "") {
         alert("Sessão expirada ou não identificada. Por favor, faça login.");
@@ -92,6 +97,11 @@
     }
 
     async function carregarDadosPerfil() {
+        if (nomeSalvoLocal) {
+            document.getElementById('nome-perfil').innerText = `Olá, ${nomeSalvoLocal}!`;
+            document.getElementById('perfil-nome').value = nomeSalvoLocal;
+        }
+
         try {
             const resCliente = await fetch(`http://127.0.0.1:5000/clientes/${clienteId}`);
             if (resCliente.ok) {
@@ -100,14 +110,16 @@
                 document.getElementById('nome-perfil').innerText = `Olá, ${cliente.nome}!`;
                 document.getElementById('perfil-nome').value = cliente.nome;
                 document.getElementById('perfil-email').value = cliente.email;
+                document.getElementById('perfil-telefone').value = cliente.telefone || "";
                 document.getElementById('perfil-nascimento').value = cliente.data_nascimento || "";
 
                 if (cliente.foto) {
                     document.getElementById('foto-usuario').src = cliente.foto;
                 }
+                localStorage.setItem('cliente_nome', cliente.nome);
             }
 
-            const resCompras = await fetch(`http://127.0.0.1:5000/compras/${clienteId}`);
+            const resCompras = await fetch(`http://127.0.0.1:5000/historico/${clienteId}`);
             const listaDiv = document.getElementById('lista-compras');
 
             if (resCompras.ok) {
@@ -119,7 +131,7 @@
                                 <strong>Pedido #${c.id}</strong>
                                 <p><b>Produto:</b> ${c.nome_produto || 'Camisa'} - Tamanho: ${c.tamanho}</p>
                                 <p><b>Valor:</b> R$ ${Number(c.preco).toFixed(2)}</p>
-                                <p><b>Data:</b> ${new Date(c.data_compra).toLocaleDateString('pt-BR')}</p>
+                                <p><b>Data:</b> ${c.data_compra}</p>
                             </div>
                             <span class="status-badge">${c.status || 'Aprovado'}</span>
                         </div>
@@ -133,6 +145,7 @@
 
         } catch (error) {
             console.error("Erro ao buscar dados do perfil:", error);
+            document.getElementById('lista-compras').innerHTML = "<p style='color: #dc3545;'>Servidor Flask offline. Não foi possível carregar as compras.</p>";
         }
     }
 
@@ -149,13 +162,17 @@
     async function salvarDadosPerfil(event) {
         event.preventDefault();
 
+        const nome = document.getElementById('perfil-nome').value;
         const email = document.getElementById('perfil-email').value;
         const senha = document.getElementById('perfil-senha').value;
+        const telefone = document.getElementById('perfil-telefone').value;
         const nascimento = document.getElementById('perfil-nascimento').value;
         const fotoSrc = document.getElementById('foto-usuario').src; 
 
         const dadosAtualizados = {
+            nome: nome,
             email: email,
+            telefone: telefone,
             data_nascimento: nascimento,
             foto: fotoSrc 
         };
@@ -172,14 +189,15 @@
             });
 
             if (res.ok) {
-                alert("Perfil atualizado com sucesso!");
+                localStorage.setItem('cliente_nome', nome);
+                alert("Perfil updated com sucesso!");
                 location.reload();
             } else {
                 const erro = await res.json();
                 alert("Erro ao atualizar: " + (erro.error || "Tente novamente"));
             }
         } catch (e) {
-            alert("Não foi possível conectar ao servidor.");
+            alert("Não foi possível conectar ao servidor Flask para salvar. Certifique-se de que o terminal Python está ativo e com CORS liberado.");
         }
     }
 

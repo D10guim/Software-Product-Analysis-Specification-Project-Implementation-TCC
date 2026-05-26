@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy import func
 
 app = Flask(__name__)
 CORS(app)
@@ -64,15 +66,21 @@ class Avaliacao(db.Model):
     comentario = db.Column(db.Text, nullable=False)
 
 class Cliente(db.Model):
+    __tablename__ = 'cliente'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    telefone = db.Column(db.String(20))
+    senha = db.Column(db.String(255), nullable=False)
+    data_nascimento = db.Column(db.Date, nullable=False)
+    telefone = db.Column(db.String(20), nullable=True)
+    foto = db.Column(db.Text, nullable=True)
+    data_criacao = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 class Pedido(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
     total = db.Column(db.Float, nullable=False)
+    data_compra = db.Column(db.DateTime, default=db.func.current_timestamp())
     itens = db.relationship('ItemPedido', backref='pedido', lazy=True, cascade="all, delete-orphan")
 
 class ItemPedido(db.Model):
@@ -81,6 +89,7 @@ class ItemPedido(db.Model):
     camisa_id = db.Column(db.Integer, db.ForeignKey('camisa.id'), nullable=False)
     quantidade = db.Column(db.Integer, nullable=False)
     preco_unitario = db.Column(db.Float, nullable=False)
+    tamanho = db.Column(db.String(10), nullable=True)
 
 @app.route('/uploads/<filename>')
 def servir_imagem(filename):
@@ -89,8 +98,22 @@ def servir_imagem(filename):
 @app.route('/camisas', methods=['GET', 'POST'])
 def rota_camisas():
     if request.method == 'GET':
-        camisas = Camisa.query.all()
-        return jsonify([c.to_dict() for c in camisas])
+        try:
+            resultados = db.session.query(
+                Camisa,
+                func.coalesce(func.avg(Avaliacao.nota), 0.0).label('media_nota')
+            ).outerjoin(Avaliacao, Camisa.id == Avaliacao.camisa_id).group_by(Camisa.id).all()
+
+            lista_camisas = []
+            for camisa, media_nota in resultados:
+                dados_camisa = camisa.to_dict() 
+                dados_camisa['media_nota'] = float(media_nota) if media_nota is not None else 0.0
+                lista_camisas.append(dados_camisa)
+
+            return jsonify(lista_camisas), 200
+        except Exception as e:
+            print(f"Erro ao listar camisas: {e}")
+            return jsonify({"erro": str(e)}), 500
 
     if request.method == 'POST':
         try:
@@ -171,7 +194,7 @@ def gerenciar_camisa(id):
                         db.session.add(nova_img)
 
             db.session.commit()
-            return jsonify({"msg": "Produto atualizado com sucesso!"}), 200
+            return jsonify({"msg": "Produto updated com sucesso!"}), 200
         except Exception as e:
             db.session.rollback()
             return jsonify({"erro": str(e)}), 400
@@ -231,10 +254,7 @@ def deletar_foto(foto_id):
     try:
         foto = ImagemCamisa.query.get(foto_id)
         if not foto:
-            return jsonify({"erro": "Foto não encontrada"}), 404
-        
-        # Opcional: deletar o arquivo físico da pasta uploads aqui
-        
+            return jsonify({"erro": "Foto não encontrada"}), 404        
         db.session.delete(foto)
         db.session.commit()
         return jsonify({"msg": "Foto removida com sucesso"}), 200
@@ -242,38 +262,111 @@ def deletar_foto(foto_id):
         db.session.rollback()
         return jsonify({"erro": str(e)}), 400
     
+@app.route('/clientes/<int:cliente_id>', methods=['GET'])
+def obter_cliente(cliente_id):
+    cliente = Cliente.query.get(cliente_id)
+    if not cliente:
+        return jsonify({"error": "Cliente não encontrado"}), 404
+    return jsonify({
+        "id": cliente.id,
+        "nome": cliente.nome,
+        "email": cliente.email,
+        "data_nascimento": cliente.data_nascimento,
+        "telefone": cliente.telefone,
+        "foto": cliente.foto
+    }), 200
+    
+@app.route('/clientes/atualizar/<int:cliente_id>', methods=['PUT'])
+def atualizar_cliente(cliente_id):
+    cliente = Cliente.query.get(cliente_id)
+    if not cliente:
+        return jsonify({"error": "Cliente não encontrado"}), 404
+        
+    try:
+        dados = request.get_json()
+        if 'nome' in dados: cliente.nome = dados['nome']
+        if 'email' in dados: cliente.email = dados['email']
+        if 'telefone' in dados: cliente.telefone = dados['telefone']
+        if 'data_nascimento' in dados: cliente.data_nascimento = dados['data_nascimento']
+        if 'foto' in dados: cliente.foto = dados['foto']
+        if 'senha' in dados and dados['senha'].strip() != "": 
+            cliente.senha = dados['senha']
+            
+        db.session.commit()
+        return jsonify({"message": "Perfil updated com sucesso!"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
 @app.route('/clientes', methods=['POST'])
 def cadastrar_cliente():
-    dados = request.get_json()
-    nome = dados.get('nome')
-    email = dados.get('email')
-    senha = dados.get('senha')
-    data_nascimento = dados.get('data_nascimento')
-    
-    return jsonify({"cliente_id": id_gerado_no_banco, "nome": nome}), 200
+    try:
+        dados = request.get_json()
+        nome = dados.get('nome')
+        email = dados.get('email')
+        senha = dados.get('senha')
+        data_nascimento = dados.get('data_nascimento')
+        
+        if not email or not senha or not nome:
+            return jsonify({"error": "Nome, e-mail e senha são obrigatórios!"}), 400
 
+        existente = Cliente.query.filter_by(email=email).first()
+        if existente:
+            return jsonify({"error": "Este e-mail já está cadastrado em outra conta."}), 400
+
+        novo_cliente = Cliente(
+            nome=nome, 
+            email=email, 
+            senha=senha, 
+            data_nascimento=data_nascimento
+        )
+        db.session.add(novo_cliente)
+        db.session.commit()
+        
+        return jsonify({"cliente_id": novo_cliente.id, "nome": novo_cliente.nome}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
 @app.route('/login-cliente', methods=['POST'])
 def login_cliente():
     dados = request.json
     email = dados.get('email')
-    nome = dados.get('nome')
+    senha = dados.get('senha')
 
-    if not email:
-        return jsonify({"error": "O e-mail é obrigatório!"}), 400
+    if not email or not senha:
+        return jsonify({"error": "E-mail e senha são obrigatórios!"}), 400
 
-    cliente = Cliente.query.filter_by(email=email).first()
+    cliente = Cliente.query.filter_by(email=email, senha=senha).first()
 
     if cliente:
         return jsonify({"cliente_id": cliente.id, "nome": cliente.nome}), 200
     else:
-        if not nome:
-            return jsonify({"error": "E-mail não encontrado. Digite seu nome para se cadastrar!"}), 404
+        return jsonify({"error": "E-mail ou senha incorretos."}), 401
+
+@app.route('/historico/<int:cliente_id>', methods=['GET'])
+def listar_compras(cliente_id):
+    try:
+        pedidos = Pedido.query.filter_by(cliente_id=cliente_id).order_by(Pedido.id.desc()).all()
         
-        novo_cliente = Cliente(nome=nome, email=email)
-        db.session.add(novo_cliente)
-        db.session.commit()
-        return jsonify({"cliente_id": novo_cliente.id, "nome": novo_cliente.nome}), 201
-    
+        historico = []
+        for p in pedidos:
+            for item in p.itens:
+                camisa = Camisa.query.get(item.camisa_id)
+                nome_produto = camisa.nome if camisa else "Camisa Removida"
+                
+                historico.append({
+                    "id": p.id,
+                    "nome_produto": nome_produto,
+                    "tamanho": item.tamanho if item.tamanho else "M",
+                    "preco": item.preco_unitario,
+                    "status": "Aprovado",
+                    "data_compra": p.data_compra.strftime('%Y-%m-%d') if p.data_compra else "Recentemente"
+                })
+        return jsonify(historico), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/registrar-venda', methods=['POST'])
 def registrar_venda():
     dados = request.json
@@ -294,7 +387,8 @@ def registrar_venda():
                 pedido_id=novo_pedido.id,
                 camisa_id=int(item['camisa_id']),
                 quantidade=int(item['quantidade']),
-                preco_unitario=float(item['preco'])
+                preco_unitario=float(item['preco']),
+                tamanho=item.get('tamanho', 'M')
             )
             db.session.add(novo_item)
 
@@ -302,8 +396,7 @@ def registrar_venda():
         return jsonify({"message": "Venda realizada com sucesso!", "pedido_id": novo_pedido.id}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-    
+        return jsonify({"error": str(e)}), 500    
 
 if __name__ == '__main__':
     with app.app_context():

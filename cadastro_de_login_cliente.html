@@ -1,4 +1,3 @@
-HTML
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -82,7 +81,6 @@ HTML
         </div>
     </div>
 </div>
-
 <script>
     async function executarLoginPagina(event) {
         event.preventDefault();
@@ -102,13 +100,12 @@ HTML
                 localStorage.setItem('cliente_id', dados.cliente_id);
                 localStorage.setItem('cliente_nome', dados.nome);
                 alert("Login realizado com sucesso!");
-                
                 redirecionarAposAutenticacao();
             } else {
                 alert(dados.error || "E-mail ou senha incorretos.");
             }
         } catch (e) {
-            alert("Erro ao conectar com o servidor Flask.");
+            alert("Erro ao conectar com o servidor Flask. Verifique se o terminal está ativo.");
         }
     }
 
@@ -132,10 +129,8 @@ HTML
 
             if (res.ok) {
                 alert("Cadastro realizado com sucesso! Fazendo login automático...");
-                
                 localStorage.setItem('cliente_id', dados.cliente_id || dados.id);
                 localStorage.setItem('cliente_nome', nome);
-                
                 redirecionarAposAutenticacao();
             } else {
                 alert(dados.error || "Não foi possível realizar o cadastro. Verifique os dados.");
@@ -147,7 +142,6 @@ HTML
 
     function redirecionarAposAutenticacao() {
         const carrinhoSalvo = localStorage.getItem('carrinho');
-        
         if (carrinhoSalvo && JSON.parse(carrinhoSalvo).length > 0) {
             window.location.href = "pagamento.html";
         } else {
