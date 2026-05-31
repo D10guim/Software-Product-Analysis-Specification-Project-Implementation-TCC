@@ -45,7 +45,7 @@ class Camisa(db.Model):
             "qtd_m": self.qtd_m, 
             "qtd_g": self.qtd_g, 
             "qtd_gg": self.qtd_gg
-    }
+        }
 
 class ImagemCamisa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -366,6 +366,30 @@ def listar_compras(cliente_id):
         return jsonify(historico), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/validar-estoque', methods=['POST'])
+def validar_estoque():
+    dados = request.get_json()
+    itens = dados.get('itens', [])
+
+    for item in itens:
+        camisa = Camisa.query.get(item['camisa_id'])
+        if not camisa:
+            return jsonify({"message": f"Produto {item['nome']} não encontrado no servidor."}), 404
+        
+        tamanho = item['tamanho'].upper()
+        qtd_desejada = item['quantidade']
+
+        if tamanho == 'P' and camisa.qtd_p < qtd_desejada:
+            return jsonify({"message": f"Apenas {camisa.qtd_p} unidades disponíveis para {camisa.nome} no tamanho P."}), 400
+        elif tamanho == 'M' and camisa.qtd_m < qtd_desejada:
+            return jsonify({"message": f"Apenas {camisa.qtd_m} unidades disponíveis para {camisa.nome} no tamanho M."}), 400
+        elif tamanho == 'G' and camisa.qtd_g < qtd_desejada:
+            return jsonify({"message": f"Apenas {camisa.qtd_g} unidades disponíveis para {camisa.nome} no tamanho G."}), 400
+        elif tamanho == 'GG' and camisa.qtd_gg < qtd_desejada:
+            return jsonify({"message": f"Apenas {camisa.qtd_gg} unidades disponíveis para {camisa.nome} no tamanho GG."}), 400
+
+    return jsonify({"status": "sucesso", "message": "Estoque verificado com sucesso!"}), 200
 
 @app.route('/registrar-venda', methods=['POST'])
 def registrar_venda():
@@ -383,21 +407,37 @@ def registrar_venda():
         db.session.flush() 
 
         for item in itens:
+            camisa = Camisa.query.get(int(item['camisa_id']))
+            tamanho = item.get('tamanho', 'M').upper()
+            quantidade = int(item['quantidade'])
+
+            if not camisa:
+                return jsonify({"error": f"Produto ID {item['camisa_id']} não existe."}), 404
+
+            if tamanho == 'P':
+                camisa.qtd_p -= quantidade
+            elif tamanho == 'M':
+                camisa.qtd_m -= quantidade
+            elif tamanho == 'G':
+                camisa.qtd_g -= quantidade
+            elif tamanho == 'GG':
+                camisa.qtd_gg -= quantidade
+
             novo_item = ItemPedido(
                 pedido_id=novo_pedido.id,
-                camisa_id=int(item['camisa_id']),
-                quantidade=int(item['quantidade']),
+                camisa_id=camisa.id,
+                quantidade=quantidade,
                 preco_unitario=float(item['preco']),
-                tamanho=item.get('tamanho', 'M')
+                tamanho=tamanho
             )
             db.session.add(novo_item)
 
         db.session.commit()
-        return jsonify({"message": "Venda realizada com sucesso!", "pedido_id": novo_pedido.id}), 201
+        return jsonify({"message": "Venda realizada e estoque atualizado com sucesso!", "pedido_id": novo_pedido.id}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500    
-
+        return jsonify({"error": str(e)}), 500
+    
 if __name__ == '__main__':
     with app.app_context():
         db.create_all() 

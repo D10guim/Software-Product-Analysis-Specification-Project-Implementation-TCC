@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loja Camisa 10 - Vitrine</title>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
+        body { font-family: 'Inter', sans-serif; background-image: url('image_f5b0c4.jpg'); background-size: cover; background-position: center top; background-attachment: fixed; background-repeat: no-repeat; margin: 0; padding: 20px; }
         header { text-align: center; padding: 40px 0; background: #1a73e8; color: white; border-radius: 0 0 20px 20px; margin: -20px -20px 30px -20px; }
         
         .vitrine { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; max-width: 1200px; margin: auto;  }
@@ -77,8 +77,8 @@
                         ⭐ ${notaFixada}
                     </div>
 
-                    <div onclick="adicionarAoCarrinho(${c.id}, '${c.nome.replace(/'/g, "\\'")}', ${c.preco})" 
-                         style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;" title="Adicionar ao Carrinho">
+                    <div onclick="adicionarAoCarrinho(${c.id}, '${c.nome.replace(/'/g, "\\'")}', ${c.preco}, '${urlImagem}')" 
+                        style="position: absolute; top: 10px; right: 10px; background: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10;" title="Adicionar ao Carrinho">
                         🛒
                     </div>
 
@@ -143,25 +143,54 @@
         }
     }
 
-    function adicionarAoCarrinho(id, nome, preco) {
-        alert(`Camisa ${nome} adicionada ao carrinho!`);
-        
-        let carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
-        const itemExistente = carrinho.find(i => i.camisa_id === id && i.tamanho === 'M');
+function adicionarAoCarrinho(id, nome, preco, imagem, estoqueP, estoqueM, estoqueG, estoqueGG) {
+    let tamanhoEscolhido = prompt(`Qual tamanho você deseja para a ${nome}? (P, M, G, GG)`).trim().toUpperCase();
 
-        if (itemExistente) {
-            itemExistente.quantidade += 1;
-        } else {
-            carrinho.push({
-                camisa_id: id,
-                name: nome,
-                preco: parseFloat(preco),
-                tamanho: 'M',
-                quantidade: 1
-            });
-        }
-        localStorage.setItem('carrinho', JSON.stringify(carrinho));
+    if (!tamanhoEscolhido) {
+        alert("Compra cancelada. Você precisa informar um tamanho!");
+        return; 
     }
+
+    const tamanhosValidos = ['P', 'M', 'G', 'GG'];
+    if (!tamanhosValidos.includes(tamanhoEscolhido)) {
+        alert("Tamanho inválido! Escolha entre P, M, G ou GG.");
+        return;
+    }
+
+    let estoqueDisponivel = 0;
+    if (tamanhoEscolhido === 'P') estoqueDisponivel = estoqueP;
+    if (tamanhoEscolhido === 'M') estoqueDisponivel = estoqueM;
+    if (tamanhoEscolhido === 'G') estoqueDisponivel = estoqueG;
+    if (tamanhoEscolhido === 'GG') estoqueDisponivel = estoqueGG;
+
+    if (estoqueDisponivel <= 0) {
+        alert(`Desculpe, o tamanho ${tamanhoEscolhido} da ${nome} está esgotado!`);
+        return;
+    }
+
+    let carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+    const produtoExistente = carrinho.find(item => item.camisa_id === id && item.tamanho === tamanhoEscolhido);
+
+    if (produtoExistente) {
+        if (produtoExistente.quantidade + 1 > estoqueDisponivel) {
+            alert(`Você já adicionou o limite máximo de estoque para o tamanho ${tamanhoEscolhido} (${estoqueDisponivel} un).`);
+            return;
+        }
+        produtoExistente.quantidade += 1;
+    } else {
+        carrinho.push({
+            camisa_id: id,
+            nome: nome,       
+            preco: Number(preco),
+            imagem: imagem,   
+            quantidade: 1,
+            tamanho: tamanhoEscolhido
+        });
+    }
+
+    localStorage.setItem('carrinho', JSON.stringify(carrinho));
+    alert(`${nome} (Tamanho ${tamanhoEscolhido}) adicionada ao carrinho!`);
+}
 </script>
 </body>
 </html>

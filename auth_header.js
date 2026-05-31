@@ -79,3 +79,26 @@ function gerenciarBotaoUsuario() {
         window.location.href = "cadastro_de_login_cliente.html";
     }
 }
+
+function adicionarAoCarrinho(id, nome, preco, imagem, tamanhoEscolhido) {
+    let carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+
+    const tamanho = tamanhoEscolhido ? tamanhoEscolhido.toUpperCase() : 'M';
+
+    const produtoExistente = carrinho.find(item => item.camisa_id === id && item.tamanho === tamanho);
+
+    if (produtoExistente) {
+        produtoExistente.quantidade += 1;
+    } else {
+        carrinho.push({
+            camisa_id: id,
+            nome: nome,
+            preco: preco,
+            imagem: imagem || 'https://picsum.photos/250',
+            quantidade: 1,
+            tamanho: tamanho 
+        });
+    }
+    localStorage.setItem('carrinho', JSON.stringify(carrinho));
+    alert(`${nome} (Tamanho ${tamanho}) adicionada ao carrinho!`);
+}

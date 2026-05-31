@@ -97,57 +97,62 @@
     }
 
     async function carregarDadosPerfil() {
-        if (nomeSalvoLocal) {
-            document.getElementById('nome-perfil').innerText = `Olá, ${nomeSalvoLocal}!`;
-            document.getElementById('perfil-nome').value = nomeSalvoLocal;
-        }
-
-        try {
-            const resCliente = await fetch(`http://127.0.0.1:5000/clientes/${clienteId}`);
-            if (resCliente.ok) {
-                const cliente = await resCliente.json();
-                
-                document.getElementById('nome-perfil').innerText = `Olá, ${cliente.nome}!`;
-                document.getElementById('perfil-nome').value = cliente.nome;
-                document.getElementById('perfil-email').value = cliente.email;
-                document.getElementById('perfil-telefone').value = cliente.telefone || "";
-                document.getElementById('perfil-nascimento').value = cliente.data_nascimento || "";
-
-                if (cliente.foto) {
-                    document.getElementById('foto-usuario').src = cliente.foto;
-                }
-                localStorage.setItem('cliente_nome', cliente.nome);
-            }
-
-            const resCompras = await fetch(`http://127.0.0.1:5000/historico/${clienteId}`);
-            const listaDiv = document.getElementById('lista-compras');
-
-            if (resCompras.ok) {
-                const compras = await resCompras.json();
-                if (compras && compras.length > 0) {
-                    listaDiv.innerHTML = compras.map(c => `
-                        <div class="compra-card">
-                            <div class="compra-info">
-                                <strong>Pedido #${c.id}</strong>
-                                <p><b>Produto:</b> ${c.nome_produto || 'Camisa'} - Tamanho: ${c.tamanho}</p>
-                                <p><b>Valor:</b> R$ ${Number(c.preco).toFixed(2)}</p>
-                                <p><b>Data:</b> ${c.data_compra}</p>
-                            </div>
-                            <span class="status-badge">${c.status || 'Aprovado'}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    listaDiv.innerHTML = "<p style='color: #888;'>Você ainda não realizou nenhuma compra.</p>";
-                }
-            } else {
-                listaDiv.innerHTML = "<p style='color: #888;'>Nenhuma compra encontrada.</p>";
-            }
-
-        } catch (error) {
-            console.error("Erro ao buscar dados do perfil:", error);
-            document.getElementById('lista-compras').innerHTML = "<p style='color: #dc3545;'>Servidor Flask offline. Não foi possível carregar as compras.</p>";
-        }
+    if (nomeSalvoLocal) {
+        document.getElementById('nome-perfil').innerText = `Olá, ${nomeSalvoLocal}!`;
+        document.getElementById('perfil-nome').value = nomeSalvoLocal;
     }
+
+    try {
+        const resCliente = await fetch(`http://127.0.0.1:5000/clientes/${clienteId}`);
+        if (resCliente.ok) {
+            const cliente = await resCliente.json();
+            
+            document.getElementById('nome-perfil').innerText = `Olá, ${cliente.nome}!`;
+            document.getElementById('perfil-nome').value = cliente.nome;
+            document.getElementById('perfil-email').value = cliente.email;
+            document.getElementById('perfil-telefone').value = cliente.telefone || "";
+            
+            if (cliente.data_nascimento) {
+                document.getElementById('perfil-nascimento').value = cliente.data_nascimento.split('T')[0];
+            }
+
+            if (cliente.foto) {
+                document.getElementById('foto-usuario').src = cliente.foto;
+            }
+            localStorage.setItem('cliente_nome', cliente.nome);
+        }
+
+        const resCompras = await fetch(`http://127.0.0.1:5000/historico/${clienteId}`);
+        const listaDiv = document.getElementById('lista-compras');
+
+        if (resCompras.ok) {
+            const compras = await resCompras.json();
+            if (compras && compras.length > 0) {
+                listaDiv.innerHTML = compras.map(c => `
+                    <div class="compra-card">
+                        <div class="compra-info">
+                            <strong>Pedido #${c.id}</strong>
+                            <p><b>Produto:</b> ${c.nome_produto || 'Camisa'} - Tamanho: ${c.tamanho}</p>
+                            <p><b>Valor:</b> R$ ${Number(c.preco).toFixed(2)}</p>
+                            <p><b>Data:</b> ${new Date(c.data_compra).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <span class="status-badge" style="background: ${c.status === 'Cancelado' ? '#f8d7da' : '#d4edda'}; color: ${c.status === 'Cancelado' ? '#721c24' : '#155724'};">
+                            ${c.status || 'Aprovado'}
+                        </span>
+                    </div>
+                `).join('');
+            } else {
+                listaDiv.innerHTML = "<p style='color: #888;'>Você ainda não realizou nenhuma compra.</p>";
+            }
+        } else {
+            listaDiv.innerHTML = "<p style='color: #888;'>Nenhuma compra encontrada.</p>";
+        }
+
+    } catch (error) {
+        console.error("Erro ao buscar dados do perfil:", error);
+        document.getElementById('lista-compras').innerHTML = "<p style='color: #dc3545;'>Servidor Flask offline. Não foi possível carregar as compras.</p>";
+    }
+}
 
     function previsualizarFoto(input) {
         if (input.files && input.files[0]) {
